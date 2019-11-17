@@ -19,9 +19,9 @@ In general, once the terrier-lucene package is available through a Maven reposit
 
 2. Telling Terrier the location of the index. The location should have a "lucene:" prefix.
 
-Example usages follow below
+Example usages follow below.
 
-### Printing index statistics:
+### Printing index statistics
 ```
 bin/terrier indexstats -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/Users/craigm/Documents/2019/TREC2019/anserini/index_vaswani/
 ```
@@ -36,7 +36,7 @@ bin/terrier interactive -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/
 
 Craig Macdonald, University of Glasgow
 
-## TODO
+## TODO
 
 - How to get document lengths?
 - How is an IndexRef passed to MultiIndex?
