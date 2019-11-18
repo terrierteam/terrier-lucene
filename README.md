@@ -10,7 +10,10 @@ This package intends to allow Terrier to read an index created by Lucene. Our pa
 
 ## Compiling
 
+Usual Maven installation method
+```
 mvn -DskipTests install
+```
 
 ## Usage
 
