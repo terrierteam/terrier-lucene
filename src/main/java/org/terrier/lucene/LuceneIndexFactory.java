@@ -52,7 +52,7 @@ public class LuceneIndexFactory implements IndexLoader {
             indices.add(new LuceneIndex(lr));
         }
         System.err.println("Lucene index has " + indices.size() + " segments (leaves)");
-        if (indices.size() > 0)
+        if (indices.size() > 1)
         {
             System.err.println("using multiindex");
             return new MultiIndex(indices.toArray(new Index[0]));
