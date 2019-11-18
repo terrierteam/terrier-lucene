@@ -5,11 +5,12 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import org.apache.lucene.index.LeafReader;
+import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.util.SmallFloat;
 import org.terrier.structures.BasicDocumentIndexEntry;
 import org.terrier.structures.BasicLexiconEntry;
 import org.terrier.structures.CollectionStatistics;
@@ -29,15 +30,17 @@ import org.terrier.structures.postings.WritablePosting;
 
 public class LuceneIndex extends Index {
 
-    static final String DEFAULT_FIELD = "Contents";
+    static final String DEFAULT_FIELD = "contents";
 
-    static class PostingEnumIterablePosting extends IterablePostingImpl {
+    class PostingEnumIterablePosting extends IterablePostingImpl {
         PostingsEnum pe;
+        NumericDocValues ndv;
         int docid;
         int f;
 
-        public PostingEnumIterablePosting(PostingsEnum _pe) {
+        public PostingEnumIterablePosting(PostingsEnum _pe, NumericDocValues _ndv) {
             pe = _pe;
+            ndv = _ndv;
         }
 
         @Override
@@ -54,6 +57,7 @@ public class LuceneIndex extends Index {
             if (docid == DocIdSetIterator.NO_MORE_DOCS)
                 return docid = EOL;
             f = pe.freq();
+            ndv.advance(docid);
             return docid;
         }
 
@@ -64,8 +68,12 @@ public class LuceneIndex extends Index {
 
         @Override
         public int getDocumentLength() {
-            // TODO Auto-generated method stub
-            return 0;
+            try{
+                return (int) SmallFloat.longToInt4(ndv.longValue());
+                //return getDocumentIndex().getDocumentLength(this.getId());
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
         }
 
         @Override
@@ -92,8 +100,6 @@ public class LuceneIndex extends Index {
         this.ir = _lr;
     }
 
-    
-
     @Override
     public void close() throws IOException {
         ir.close();
@@ -108,11 +114,12 @@ public class LuceneIndex extends Index {
     public CollectionStatistics getCollectionStatistics() {
         try{
             final int numDocs = ir.numDocs();
-            final int numTerms = Integer.MAX_VALUE;
+            final int numTerms = (int) ir.terms(DEFAULT_FIELD).size();
             final long numTokens = ir.getSumTotalTermFreq(DEFAULT_FIELD);
             final long numPointers = ir.getSumDocFreq(DEFAULT_FIELD);
             final long[] fieldTokens = new long[0];
-            return new CollectionStatistics(numDocs, numTerms, numTokens, numPointers, fieldTokens);
+            final String[] fieldNames = new String[0];
+            return new CollectionStatistics(numDocs, numTerms, numTokens, numPointers, fieldTokens, fieldNames);
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
@@ -146,13 +153,25 @@ public class LuceneIndex extends Index {
 
             @Override
             public int getDocumentLength(final int docid) throws IOException {
-                // TODO Auto-generated method stub
-                return 0;
+                
+                // Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
+                // if (terms == null)
+                // {
+                //     return 0;
+                // }
+                // long total = terms.getSumTotalTermFreq();
+                // long length = SmallFloat.longToInt4(total);
+                // return (int) length;
+
             }
 
             @Override
             public DocumentIndexEntry getDocumentEntry(final int docid) throws IOException {
-                return new BasicDocumentIndexEntry(0, new SimpleBitIndexPointer((byte)0, (long) docid, (byte)0, 0));
+                int numTerms = (int) ir.getTermVector(docid, DEFAULT_FIELD).size();
+                return new BasicDocumentIndexEntry(
+                    getDocumentLength(docid), 
+                    new SimpleBitIndexPointer((byte)0, (long) docid, (byte)0, 
+                        numTerms));
             }
         };
     }
@@ -189,7 +208,7 @@ public class LuceneIndex extends Index {
                 LuceneLexiconEntry lEntry = (LuceneLexiconEntry)_lEntry;
                 PostingsEnum pe = ir.postings(lEntry.t);
 
-                return new PostingEnumIterablePosting(pe);
+                return new PostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
             }
 
         };
@@ -283,14 +302,25 @@ public class LuceneIndex extends Index {
                 return new String[]{"docno"};
             }
         
+            //TODO - these could go as default implementation in MetaIndex.
             @Override
-            public String[][] getItems(String[] Key, int[] docids) throws IOException {
-                throw new UnsupportedOperationException();
+            public String[][] getItems(String[] Keys, int[] docids) throws IOException {
+                String[][] rtr = new String[Keys.length][];
+                for(int i=0;i<Keys.length;i++)
+                {
+                    rtr[i] = getItems(Keys[i], docids);
+                }
+                return rtr;
             }
         
             @Override
-            public String[] getItems(String[] keys, int docid) throws IOException {
-                throw new UnsupportedOperationException();
+            public String[] getItems(String[] Keys, int docid) throws IOException {
+                String[] rtr = new String[Keys.length];
+                for(int i=0;i<Keys.length;i++)
+                {
+                    rtr[i] = getItem(Keys[i], docid);
+                }
+                return rtr;
             }
         
             @Override
