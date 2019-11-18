@@ -154,14 +154,15 @@ public class LuceneIndex extends Index {
             @Override
             public int getDocumentLength(final int docid) throws IOException {
                 
-                // Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
-                // if (terms == null)
-                // {
-                //     return 0;
-                // }
-                // long total = terms.getSumTotalTermFreq();
-                // long length = SmallFloat.longToInt4(total);
-                // return (int) length;
+                //TODO not sure this works.
+                Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
+                if (terms == null)
+                {
+                    return 0;
+                }
+                long total = terms.getSumTotalTermFreq();
+                long length = SmallFloat.longToInt4(total);
+                return (int) length;
 
             }
 
