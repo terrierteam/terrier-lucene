@@ -10,7 +10,10 @@ This package intends to allow Terrier to read an index created by Lucene. Our pa
 
 ## Compiling
 
+Usual Maven installation method
+```
 mvn -DskipTests install
+```
 
 ## Usage
 
@@ -38,8 +41,8 @@ Craig Macdonald, University of Glasgow
 
 ## TODO
 
-- How to get document lengths?
 - How is an IndexRef passed to MultiIndex?
 - Does MultiIndex record the mulitple "pointers" appropriately
 - docids - do they need to be aligned for multiple leaf lucene indices?
 - better unit testing
+- direct index support
