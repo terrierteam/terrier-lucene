@@ -6,7 +6,7 @@ This package intends to allow Terrier to read an index created by Lucene. Our pa
 ## Requirements
 
 - You need the current Github version of Terrier, i.e. 5.2-SNAPSHOT
-- You need an Anserini index
+- You need a Lucene index, in particular with an "id" field (containing the docno of the document) and a "contents" textual field.
 
 ## Compiling
 
@@ -20,7 +20,7 @@ mvn -DskipTests install
 In general, once the terrier-lucene package is available through a Maven repository (i.e. `mvn install`) has been exectuted, then the usage is two-fold:
 1. Telling Terrier to load the terrier-lucene package
 
-2. Telling Terrier the location of the index. The location should have a "lucene:" prefix.
+2. Telling Terrier the location of the index. The location should have a "lucene:" prefix. If you need a direct index, and the Lucene index has been generated using term vectors, you should used the "directlucene:" prefix.
 
 Example usages follow below.
 
@@ -37,12 +37,13 @@ bin/terrier interactive -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/
 
 ## Contributors
 
-Craig Macdonald, University of Glasgow
+Code: Craig Macdonald, University of Glasgow
+
+Useful inputs from Jimmy Lin, University of Waterloo
 
 ## TODO
 
 - How is an IndexRef passed to MultiIndex?
-- Does MultiIndex record the mulitple "pointers" appropriately
+- Does MultiIndex record the mulitple lexicon "pointers" appropriately
 - docids - do they need to be aligned for multiple leaf lucene indices?
-- better unit testing
-- direct index support
+- fix positions for Inverted

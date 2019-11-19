@@ -8,11 +8,11 @@ import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.Terms;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.SmallFloat;
 import org.terrier.structures.BasicDocumentIndexEntry;
 import org.terrier.structures.BasicLexiconEntry;
+import org.terrier.structures.BitIndexPointer;
 import org.terrier.structures.CollectionStatistics;
 import org.terrier.structures.DocumentIndex;
 import org.terrier.structures.DocumentIndexEntry;
@@ -24,6 +24,7 @@ import org.terrier.structures.Pointer;
 import org.terrier.structures.PostingIndex;
 import org.terrier.structures.SimpleBitIndexPointer;
 import org.terrier.structures.postings.BasicPostingImpl;
+import org.terrier.structures.postings.BlockPosting;
 import org.terrier.structures.postings.IterablePosting;
 import org.terrier.structures.postings.IterablePostingImpl;
 import org.terrier.structures.postings.WritablePosting;
@@ -32,7 +33,60 @@ public class LuceneIndex extends Index {
 
     static final String DEFAULT_FIELD = "contents";
 
-    class PostingEnumIterablePosting extends IterablePostingImpl {
+    class LuceneLexicon extends Lexicon<String> {
+		@Override
+		public void close() throws IOException {}
+
+		@Override
+		public Iterator<Entry<String, LexiconEntry>> iterator() {
+		    throw new UnsupportedOperationException();
+		    //TODO this is achiveable using  lr.terms(DEFAULT_FIELD).iterator()   
+		}
+
+		@Override
+		public int numberOfEntries() {
+		    return getCollectionStatistics().getNumberOfUniqueTerms();
+		}
+
+		LuceneLexiconEntry entryFromTerm(Term t) {
+		    try{
+		        long F;
+		        if ( (F=ir.totalTermFreq(t)) == (long) 0)
+		            return null;
+		        final LuceneLexiconEntry lie = new LuceneLexiconEntry();
+		        lie.t = t;
+		        lie.setStatistics(ir.docFreq(t), (int)F);
+		        return lie;
+		    } catch (final IOException ioe ) {
+		        throw new RuntimeException(ioe);
+		    }
+		}
+
+		@Override
+		public LexiconEntry getLexiconEntry(final String term) {
+		    final Term t = new Term(DEFAULT_FIELD, term);
+		    return  entryFromTerm(t);  
+		    
+		}
+
+		@Override
+		public Entry<String, LexiconEntry> getLexiconEntry(final int termid) {
+		    throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Entry<String, LexiconEntry> getIthLexiconEntry(final int index) {
+		    throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Iterator<Entry<String, LexiconEntry>> getLexiconEntryRange(final String from, final String to) {
+            throw new UnsupportedOperationException();
+            //TODO: this is achievable by using lr.terms(DEFAULT_FIELD).iterator().seekCeil()
+		}
+	}
+
+	static class PostingEnumIterablePosting extends IterablePostingImpl {
         PostingsEnum pe;
         NumericDocValues ndv;
         int docid;
@@ -44,7 +98,8 @@ public class LuceneIndex extends Index {
         }
 
         @Override
-        public void close() throws IOException {}
+        public void close() throws IOException {
+        }
 
         @Override
         public boolean endOfPostings() {
@@ -68,9 +123,9 @@ public class LuceneIndex extends Index {
 
         @Override
         public int getDocumentLength() {
-            try{
+            try {
                 return (int) SmallFloat.longToInt4(ndv.longValue());
-                //return getDocumentIndex().getDocumentLength(this.getId());
+                // return getDocumentIndex().getDocumentLength(this.getId());
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
@@ -88,16 +143,44 @@ public class LuceneIndex extends Index {
 
         @Override
         public void setId(int id) {
-           throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    static class PositionsPostingEnumIterablePosting extends PostingEnumIterablePosting implements BlockPosting {
+        int[] positions;
+
+        public PositionsPostingEnumIterablePosting(PostingsEnum _pe, NumericDocValues _ndv) {
+            super(_pe, _ndv);
         }
 
+        @Override
+        public int[] getPositions() {
+            try {
+                if (positions == null)
+                    positions = new int[f];
+                for (int p = 0; p < f; p++)
+                    positions[p] = pe.nextPosition();
+                return positions;
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        }
+
+        @Override
+        public int next() throws IOException {
+            positions = null;
+            return super.next();
+        }
 
     }
 
-    LeafReader ir;
+    final LeafReader ir;
+    final boolean blocks;
 
-    LuceneIndex(LeafReader _lr) {
+    public LuceneIndex(LeafReader _lr) {
         this.ir = _lr;
+        blocks = ir.getFieldInfos().hasProx();
     }
 
     @Override
@@ -107,12 +190,14 @@ public class LuceneIndex extends Index {
 
     @Override
     public void flush() throws IOException {
-        
+
     }
 
     @Override
     public CollectionStatistics getCollectionStatistics() {
-        try{
+        try {
+            assert ir.terms(DEFAULT_FIELD) != null;
+
             final int numDocs = ir.numDocs();
             final int numTerms = (int) ir.terms(DEFAULT_FIELD).size();
             final long numTokens = ir.getSumTotalTermFreq(DEFAULT_FIELD);
@@ -127,19 +212,8 @@ public class LuceneIndex extends Index {
 
     @Override
     public PostingIndex<?> getDirectIndex() {
+        //only DirectLuceneIndex implements a DirectIndex
         return null;
-        // return new PostingIndex<BitIndexPointer>()
-        // {
-        // @Override
-        // public void close() throws IOException {}
-
-        // @Override
-        // public IterablePosting getPostings(Pointer lEntry) throws IOException {
-        // Document d = ir.document((int) ((BitIndexPointer) lEntry).getOffset());
-        // //TODO make a IterablePosting from this
-        // }
-
-        // }
     }
 
     @Override
@@ -153,26 +227,25 @@ public class LuceneIndex extends Index {
 
             @Override
             public int getDocumentLength(final int docid) throws IOException {
-                
-                //TODO not sure this works.
-                Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
-                if (terms == null)
-                {
-                    return 0;
-                }
-                long total = terms.getSumTotalTermFreq();
-                long length = SmallFloat.longToInt4(total);
-                return (int) length;
+
+                // TODO not sure this works.
+                // Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
+                // if (terms == null) {
+                //     return 0;
+                // }
+                // long total = terms.getSumTotalTermFreq();
+                // long length = SmallFloat.longToInt4(total);
+                // return (int) length;
+                throw new UnsupportedOperationException();
 
             }
 
             @Override
             public DocumentIndexEntry getDocumentEntry(final int docid) throws IOException {
                 int numTerms = (int) ir.getTermVector(docid, DEFAULT_FIELD).size();
-                return new BasicDocumentIndexEntry(
-                    getDocumentLength(docid), 
-                    new SimpleBitIndexPointer((byte)0, (long) docid, (byte)0, 
-                        numTerms));
+                return new LuceneDocumentIndexEntry(getDocumentLength(docid),
+                        new SimpleBitIndexPointer((byte) 0, (long) docid, (byte) 0, numTerms),
+                        docid);
             }
         };
     }
@@ -180,13 +253,18 @@ public class LuceneIndex extends Index {
     @Override
     public Object getIndexStructure(final String structureName) {
         switch (structureName) {
-            case "lexicon": return getLexicon();
-            case "document": return getDocumentIndex();
-            case "direct": return getDirectIndex();
-            case "inverted": return getInvertedIndex();
-            case "meta": return getMetaIndex();
-            default:
-                break;
+        case "lexicon":
+            return getLexicon();
+        case "document":
+            return getDocumentIndex();
+        case "direct":
+            return getDirectIndex();
+        case "inverted":
+            return getInvertedIndex();
+        case "meta":
+            return getMetaIndex();
+        default:
+            break;
         }
         return null;
     }
@@ -202,20 +280,37 @@ public class LuceneIndex extends Index {
         return new PostingIndex<LuceneLexiconEntry>() {
 
             @Override
-            public void close() throws IOException {}
+            public void close() throws IOException {
+            }
 
             @Override
             public IterablePosting getPostings(Pointer _lEntry) throws IOException {
-                LuceneLexiconEntry lEntry = (LuceneLexiconEntry)_lEntry;
-                PostingsEnum pe = ir.postings(lEntry.t);
-
+                LuceneLexiconEntry lEntry = (LuceneLexiconEntry) _lEntry;
+                PostingsEnum pe = null;
+                if (blocks) {
+                    pe = ir.postings(lEntry.t, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+                    return new PositionsPostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
+                }
+                pe = ir.postings(lEntry.t);
                 return new PostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
             }
-
         };
     }
 
-    
+    static class LuceneDocumentIndexEntry extends BasicDocumentIndexEntry {
+        int docid;
+
+        public LuceneDocumentIndexEntry(int length, BitIndexPointer pointer, int docid) {
+            super(length, pointer);
+            this.docid = docid;
+        }
+
+        public LuceneDocumentIndexEntry(int length, byte fileId, long byteOffset, byte bitOffset, int numberOfTerms,
+                int docid) {
+            super(length, fileId, byteOffset, bitOffset, numberOfTerms);
+            this.docid = docid;
+        }
+    }
 
     static class LuceneLexiconEntry extends BasicLexiconEntry
     {
@@ -225,70 +320,7 @@ public class LuceneIndex extends Index {
 
     @Override
     public Lexicon<String> getLexicon() {
-        return new Lexicon<String>() {
-
-            @Override
-            public void close() throws IOException {}
-
-            @Override
-            public Iterator<Entry<String, LexiconEntry>> iterator() {
-                return null;
-            //     try{
-            //     Terms terms = ir.terms(DEFAULT_FIELD);
-            //     final TermsEnum te = terms.iterator();
-
-            //     return new Iterator<Entry<String, LexiconEntry>>()
-            //     {
-
-            //     };     
-            // }           
-            }
-
-            @Override
-            public int numberOfEntries() {
-                return getCollectionStatistics().getNumberOfUniqueTerms();
-            }
-
-            LexiconEntry entryFromTerm(Term t) {
-                try{
-                    long F;
-                    if ( (F=ir.totalTermFreq(t)) == (long) 0)
-                        return null;
-                    final LuceneLexiconEntry lie = new LuceneLexiconEntry();
-                    lie.t = t;
-                    lie.setStatistics(ir.docFreq(t), (int)F);
-                    return lie;
-                } catch (final IOException ioe ) {
-                    throw new RuntimeException(ioe);
-                }
-            }
-
-            @Override
-            public LexiconEntry getLexiconEntry(final String term) {
-                final Term t = new Term(DEFAULT_FIELD, term);
-                return  entryFromTerm(t);  
-                
-            }
-
-            @Override
-            public Entry<String, LexiconEntry> getLexiconEntry(final int termid) {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public Entry<String, LexiconEntry> getIthLexiconEntry(final int index) {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public Iterator<Entry<String, LexiconEntry>> getLexiconEntryRange(final String from, final String to) {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-        };
+        return new LuceneLexicon();
     }
 
     @Override
@@ -346,8 +378,7 @@ public class LuceneIndex extends Index {
         
             @Override
             public String[] getAllItems(int docid) throws IOException {
-                // TODO Auto-generated method stub
-                return null;
+                return new String[]{getItem("docno", docid)};
             }
         };
     }
