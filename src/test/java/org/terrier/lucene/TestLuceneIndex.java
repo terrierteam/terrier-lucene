@@ -10,6 +10,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.PostingsEnum;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.DocIdSetIterator;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -69,6 +72,18 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
             DOCS,
             DOCNOS);
         
+        PostingsEnum pe = ir.leaves().get(0).reader().postings(new Term("contents", "fox"));
+        //PostingsEnum pe = MultiTerms.getTermPostingsEnum(ir, "contents", new BytesRef("fox"), PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+        assertEquals(0, pe.nextDoc());
+        assertEquals(0, pe.docID());
+        assertEquals(1, pe.freq());
+        assertEquals(2, pe.nextPosition());
+        assertEquals(1, pe.nextDoc());
+        assertEquals(1, pe.docID());
+        assertEquals(1, pe.freq());
+        assertEquals(2, pe.nextPosition());
+        assertEquals(DocIdSetIterator.NO_MORE_DOCS, pe.nextDoc());
+
         LuceneIndex index = new DirectLuceneIndex(ir.leaves().get(0).reader());
         assertTrue(index.blocks);
         checkIndex(index);

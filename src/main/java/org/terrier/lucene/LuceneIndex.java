@@ -5,10 +5,12 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import org.apache.lucene.index.LeafReader;
+import org.apache.lucene.index.MultiTerms;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.SmallFloat;
 import org.terrier.structures.BasicDocumentIndexEntry;
 import org.terrier.structures.BasicLexiconEntry;
@@ -95,6 +97,8 @@ public class LuceneIndex extends Index {
         public PostingEnumIterablePosting(PostingsEnum _pe, NumericDocValues _ndv) {
             pe = _pe;
             ndv = _ndv;
+            if (pe == null)
+                throw new IllegalArgumentException("PostingsEnum cannot be null");
         }
 
         @Override
@@ -236,8 +240,8 @@ public class LuceneIndex extends Index {
                 // long total = terms.getSumTotalTermFreq();
                 // long length = SmallFloat.longToInt4(total);
                 // return (int) length;
-                throw new UnsupportedOperationException();
-
+                //throw new UnsupportedOperationException();
+                return 0;
             }
 
             @Override
@@ -288,10 +292,13 @@ public class LuceneIndex extends Index {
                 LuceneLexiconEntry lEntry = (LuceneLexiconEntry) _lEntry;
                 PostingsEnum pe = null;
                 if (blocks) {
-                    pe = ir.postings(lEntry.t, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+                    pe = MultiTerms.getTermPostingsEnum(
+                        ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text()), PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+                    //pe = ir.postings(lEntry.t, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
                     return new PositionsPostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
                 }
-                pe = ir.postings(lEntry.t);
+                pe = MultiTerms.getTermPostingsEnum(ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text()));
+                //pe = ir.postings(lEntry.t);
                 return new PostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
             }
         };
