@@ -1,3 +1,7 @@
 /target/
 ._*
 .DS_Store
+.vscode
+.classpath
+.project
+.settings
