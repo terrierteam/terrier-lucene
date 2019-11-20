@@ -10,9 +10,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.MultiTerms;
 import org.apache.lucene.index.PostingsEnum;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.util.BytesRef;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -68,12 +69,12 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
 
     @Test public void testBlocks() throws Exception
     {
-        IndexReader ir = new LuceneIndexTestUtils(tempLocation, true, true).makeIndexReader(
-            DOCS,
-            DOCNOS);
-        
-        PostingsEnum pe = ir.leaves().get(0).reader().postings(new Term("contents", "fox"));
-        //PostingsEnum pe = MultiTerms.getTermPostingsEnum(ir, "contents", new BytesRef("fox"), PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+        IndexReader ir = new LuceneIndexTestUtils(tempLocation, true, true)
+        //.buildTestIndexReader(DOCS, DOCNOS);
+        .makeIndexReader(DOCS,DOCNOS);
+        assertEquals(1, ir.leaves().size());
+
+        PostingsEnum pe = MultiTerms.getTermPostingsEnum(ir, "contents", new BytesRef("fox"));//, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
         assertEquals(0, pe.nextDoc());
         assertEquals(0, pe.docID());
         assertEquals(1, pe.freq());
@@ -140,7 +141,9 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
         assertEquals(terms.length, id1.size());
         for(String t : terms)
         {
-            assertTrue("Term " + t + " is missing in document " +docid, id1.contains(index.getLexicon().getLexiconEntry(t).getTermId()));
+            LexiconEntry le = index.getLexicon().getLexiconEntry(t);
+            assertNotNull("LexiconEntry for term " + t + " not found", le);
+            assertTrue("Term " + t + " is missing in document " +docid, id1.contains(le.getTermId()));
         }
     }
  

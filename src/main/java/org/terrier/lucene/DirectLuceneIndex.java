@@ -58,6 +58,9 @@ public class DirectLuceneIndex extends LuceneIndex {
         @Override
         LuceneLexiconEntry entryFromTerm(Term t) {
             LuceneLexiconEntry lle = super.entryFromTerm(t);
+            //term not found
+            if (lle == null)
+                return null;
             lle.termId = term2termid.get(t.text());
             return lle;
         }

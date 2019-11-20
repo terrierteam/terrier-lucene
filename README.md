@@ -26,24 +26,27 @@ Example usages follow below.
 
 ### Printing index statistics
 ```
-bin/terrier indexstats -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/Users/craigm/Documents/2019/TREC2019/anserini/index_vaswani/
+bin/terrier indexstats -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/path/to/lucene/index/
 ```
 
 ### Interactive Retrival
 ```
-bin/terrier interactive -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/Users/craigm/Documents/2019/TREC2019/anserini/index_vaswani/
+bin/terrier interactive -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/path/to/lucene/index/
 ```
 
+(The -P option was added in Terrier 5.2)
 
 ## Contributors
 
 Code: Craig Macdonald, University of Glasgow
 
-Useful inputs from Jimmy Lin, University of Waterloo
+Useful debuggin and input from Jimmy Lin, University of Waterloo
 
 ## TODO
 
 - How is an IndexRef passed to MultiIndex?
-- Does MultiIndex record the mulitple lexicon "pointers" appropriately
 - docids - do they need to be aligned for multiple leaf lucene indices?
-- fix positions for Inverted
+
+## Known Issues
+
+- We do not have any correspondence between Lucene fields and Terrier fields. This is not planned for the foreseeable future.

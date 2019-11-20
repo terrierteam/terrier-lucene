@@ -67,7 +67,7 @@ public class LuceneIndex extends Index {
 		@Override
 		public LexiconEntry getLexiconEntry(final String term) {
 		    final Term t = new Term(DEFAULT_FIELD, term);
-		    return  entryFromTerm(t);  
+		    return entryFromTerm(t);  
 		    
 		}
 
@@ -185,6 +185,10 @@ public class LuceneIndex extends Index {
     public LuceneIndex(LeafReader _lr) {
         this.ir = _lr;
         blocks = ir.getFieldInfos().hasProx();
+        if (ir.getFieldInfos().fieldInfo(DEFAULT_FIELD) == null)
+            throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'contents' for the text of the documents");
+        if (ir.getFieldInfos().fieldInfo("id") == null)
+            throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'id' for the docnos");
     }
 
     @Override
@@ -293,7 +297,9 @@ public class LuceneIndex extends Index {
                 PostingsEnum pe = null;
                 if (blocks) {
                     pe = MultiTerms.getTermPostingsEnum(
-                        ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text()), PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+                        ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text())
+                        /*, PostingsEnum.FREQS & PostingsEnum.POSITIONS*/ //these arent needed it seem
+                        );
                     //pe = ir.postings(lEntry.t, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
                     return new PositionsPostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
                 }
