@@ -33,6 +33,7 @@ import org.terrier.structures.postings.WritablePosting;
 
 public class LuceneIndex extends Index {
 
+    static final boolean DOCLEN_FROM_TERM_VECTORS = true;
     static final String DEFAULT_FIELD = "contents";
 
     class LuceneLexicon extends Lexicon<String> {
@@ -88,7 +89,7 @@ public class LuceneIndex extends Index {
 		}
 	}
 
-	static class PostingEnumIterablePosting extends IterablePostingImpl {
+	class PostingEnumIterablePosting extends IterablePostingImpl {
         PostingsEnum pe;
         NumericDocValues ndv;
         int docid;
@@ -128,6 +129,8 @@ public class LuceneIndex extends Index {
         @Override
         public int getDocumentLength() {
             try {
+                if (DOCLEN_FROM_TERM_VECTORS)
+                    return SmallFloat.longToInt4(ir.getTermVector(this.getId(), DEFAULT_FIELD).getSumTotalTermFreq());
                 return (int) SmallFloat.longToInt4(ndv.longValue());
                 // return getDocumentIndex().getDocumentLength(this.getId());
             } catch (IOException ioe) {
@@ -151,7 +154,7 @@ public class LuceneIndex extends Index {
         }
     }
 
-    static class PositionsPostingEnumIterablePosting extends PostingEnumIterablePosting implements BlockPosting {
+    class PositionsPostingEnumIterablePosting extends PostingEnumIterablePosting implements BlockPosting {
         int[] positions;
 
         public PositionsPostingEnumIterablePosting(PostingsEnum _pe, NumericDocValues _ndv) {
@@ -189,6 +192,12 @@ public class LuceneIndex extends Index {
             throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'contents' for the text of the documents");
         if (ir.getFieldInfos().fieldInfo("id") == null)
             throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'id' for the docnos");
+        try {
+            if (DOCLEN_FROM_TERM_VECTORS && ir.getTermVector(0, DEFAULT_FIELD) == null)
+            throw new IllegalArgumentException("We assume that the Lucene index should have term vectors in order to get document lengths");
+        } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
     }
 
     @Override

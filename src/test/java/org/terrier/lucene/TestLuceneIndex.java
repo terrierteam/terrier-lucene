@@ -42,7 +42,7 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
 
     @Test public void testBasicIndexFactory() throws Exception
     {
-        Path indexLoc = new LuceneIndexTestUtils(tempLocation).makeIndex(
+        Path indexLoc = new LuceneIndexTestUtils(tempLocation, false, LuceneIndex.DOCLEN_FROM_TERM_VECTORS).makeIndex(
             DOCS,
             DOCNOS);
         Index index = IndexFactory.of(IndexRef.of(LuceneIndexFactory.PREFIX + indexLoc.toString()));
@@ -56,7 +56,7 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
 
     @Test public void testBasic() throws Exception
     {
-        IndexReader ir = new LuceneIndexTestUtils(tempLocation).makeIndexReader(
+        IndexReader ir = new LuceneIndexTestUtils(tempLocation, false, LuceneIndex.DOCLEN_FROM_TERM_VECTORS).makeIndexReader(
             DOCS,
             DOCNOS);
         
@@ -70,8 +70,7 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
     @Test public void testBlocks() throws Exception
     {
         IndexReader ir = new LuceneIndexTestUtils(tempLocation, true, true)
-        //.buildTestIndexReader(DOCS, DOCNOS);
-        .makeIndexReader(DOCS,DOCNOS);
+            .makeIndexReader(DOCS,DOCNOS);
         assertEquals(1, ir.leaves().size());
 
         PostingsEnum pe = MultiTerms.getTermPostingsEnum(ir, "contents", new BytesRef("fox"));//, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
