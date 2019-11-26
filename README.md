@@ -45,7 +45,7 @@ Useful debuggin and input from Jimmy Lin, University of Waterloo
 ## TODO
 
 - How is an IndexRef passed to MultiIndex?
-- docids - do they need to be aligned for multiple leaf lucene indices?
+- MultiIndex termids are not global
 
 ## Known Issues
 
