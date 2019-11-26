@@ -33,7 +33,7 @@ import org.terrier.structures.postings.WritablePosting;
 
 public class LuceneIndex extends Index {
 
-    static final boolean DOCLEN_FROM_TERM_VECTORS = true;
+    static final boolean DOCLEN_FROM_TERM_VECTORS = false;
     static final String DEFAULT_FIELD = "contents";
 
     class LuceneLexicon extends Lexicon<String> {
@@ -130,8 +130,8 @@ public class LuceneIndex extends Index {
         public int getDocumentLength() {
             try {
                 if (DOCLEN_FROM_TERM_VECTORS)
-                    return SmallFloat.longToInt4(ir.getTermVector(this.getId(), DEFAULT_FIELD).getSumTotalTermFreq());
-                return (int) SmallFloat.longToInt4(ndv.longValue());
+                    return (int) ir.getTermVector(this.getId(), DEFAULT_FIELD).getSumTotalTermFreq();
+                return (int) SmallFloat.byte4ToInt((byte) ndv.longValue());
                 // return getDocumentIndex().getDocumentLength(this.getId());
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
