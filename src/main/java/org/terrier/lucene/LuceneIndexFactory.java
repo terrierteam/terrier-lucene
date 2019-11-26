@@ -60,6 +60,7 @@ public class LuceneIndexFactory implements IndexLoader {
         SimpleFSDirectory dir = new SimpleFSDirectory(Paths.get(dirname));
         CompositeReader cir = DirectoryReader.open(dir);
         List<LuceneIndex> indices = new ArrayList<>();
+        boolean blocks = cir.leaves().get(0).reader().getFieldInfos().hasProx();
         for(LeafReaderContext lrc : cir.leaves())
         {
             LeafReader lr = lrc.reader();
@@ -70,7 +71,7 @@ public class LuceneIndexFactory implements IndexLoader {
         if (indices.size() > 1)
         {
             System.err.println("using multiindex");
-            return new MultiIndex(indices.toArray(new Index[0]));
+            return new MultiIndex(indices.toArray(new Index[0]), blocks, false);
         }
         return indices.get(0);
     } 
