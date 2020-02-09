@@ -8,6 +8,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiTerms;
@@ -159,6 +161,25 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
         assertEquals(2, le.getFrequency());
         //unlikely to be present
         //assertEquals(1, le.getMaxFrequencyInDocuments());
+
+        Iterator<Entry<String, LexiconEntry>> iter = index.getLexicon().iterator();
+       //"fox", "hello", "lazy", "the", "there"
+        assertTrue(iter.hasNext());
+        assertEquals("fox", iter.next().getKey());
+        assertTrue(iter.hasNext());
+        assertEquals("hello", iter.next().getKey());
+        assertTrue(iter.hasNext());
+        assertEquals("lazy", iter.next().getKey());
+        assertTrue(iter.hasNext());
+        assertEquals("the", iter.next().getKey());
+        assertTrue(iter.hasNext());
+        assertEquals("there", iter.next().getKey());
+        assertFalse(iter.hasNext());
+
+        Iterator<Entry<String, LexiconEntry>> iterRange = index.getLexicon().getLexiconEntryRange("l", "m");
+        assertTrue(iterRange.hasNext());
+        assertEquals("lazy", iterRange.next().getKey());
+        assertFalse(iterRange.hasNext());
 
         //check documentindex
         assertNotNull(index.getDocumentIndex());

@@ -1,14 +1,18 @@
 package org.terrier.lucene;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.MultiTerms;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.SmallFloat;
@@ -37,55 +41,95 @@ public class LuceneIndex extends Index {
     static final String DEFAULT_FIELD = "contents";
 
     class LuceneLexicon extends Lexicon<String> {
-		@Override
-		public void close() throws IOException {}
+        @Override
+        public void close() throws IOException {
+        }
 
-		@Override
-		public Iterator<Entry<String, LexiconEntry>> iterator() {
-		    throw new UnsupportedOperationException();
-		    //TODO this is achiveable using  lr.terms(DEFAULT_FIELD).iterator()   
-		}
+        @Override
+        public Iterator<Entry<String, LexiconEntry>> iterator() {
+            //TODO: this implementation doesnt stream, it loads into memory
+            try{
+                TermsEnum te = ir.terms(DEFAULT_FIELD).iterator();
+                List<Entry<String, LexiconEntry>> terms = new ArrayList<>();
+                while( te.next() != null)
+                {
+                    terms.add(makePair(te));
+                }
+                return terms.iterator();
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        }
 
-		@Override
-		public int numberOfEntries() {
-		    return getCollectionStatistics().getNumberOfUniqueTerms();
-		}
+        @Override
+        public int numberOfEntries() {
+            return getCollectionStatistics().getNumberOfUniqueTerms();
+        }
 
-		LuceneLexiconEntry entryFromTerm(Term t) {
-		    try{
-		        long F;
-		        if ( (F=ir.totalTermFreq(t)) == (long) 0)
-		            return null;
-		        final LuceneLexiconEntry lie = new LuceneLexiconEntry();
-		        lie.t = t;
-		        lie.setStatistics(ir.docFreq(t), (int)F);
-		        return lie;
-		    } catch (final IOException ioe ) {
-		        throw new RuntimeException(ioe);
-		    }
-		}
+        LuceneLexiconEntry entryFromTerm(Term t) {
+            try {
+                long F;
+                if ((F = ir.totalTermFreq(t)) == (long) 0)
+                    return null;
+                final LuceneLexiconEntry lie = new LuceneLexiconEntry();
+                lie.t = t;
+                lie.setStatistics(ir.docFreq(t), (int) F);
+                return lie;
+            } catch (final IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        }
 
-		@Override
-		public LexiconEntry getLexiconEntry(final String term) {
-		    final Term t = new Term(DEFAULT_FIELD, term);
-		    return entryFromTerm(t);  
-		    
-		}
+        @Override
+        public LexiconEntry getLexiconEntry(final String term) {
+            final Term t = new Term(DEFAULT_FIELD, term);
+            return entryFromTerm(t);
 
-		@Override
-		public Entry<String, LexiconEntry> getLexiconEntry(final int termid) {
-		    throw new UnsupportedOperationException();
-		}
+        }
 
-		@Override
-		public Entry<String, LexiconEntry> getIthLexiconEntry(final int index) {
-		    throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public Iterator<Entry<String, LexiconEntry>> getLexiconEntryRange(final String from, final String to) {
+        @Override
+        public Entry<String, LexiconEntry> getLexiconEntry(final int termid) {
             throw new UnsupportedOperationException();
-            //TODO: this is achievable by using lr.terms(DEFAULT_FIELD).iterator().seekCeil()
+        }
+
+        @Override
+        public Entry<String, LexiconEntry> getIthLexiconEntry(final int index) {
+            throw new UnsupportedOperationException();
+        }
+
+        Entry<String, LexiconEntry> makePair(TermsEnum te) throws IOException {
+
+            LuceneLexiconEntry lie = new LuceneLexiconEntry();
+            lie.t = new Term(DEFAULT_FIELD, te.term());
+            lie.setStatistics(te.docFreq(), (int) te.totalTermFreq());
+            return Pair.of(lie.t.text(), lie) ;
+        }
+
+        @Override
+        public Iterator<Entry<String, LexiconEntry>> getLexiconEntryRange(final String from, final String to) {
+            try{
+                TermsEnum te = ir.terms(DEFAULT_FIELD).iterator();
+                final Term firstTerm = new Term(DEFAULT_FIELD, from);
+                TermsEnum.SeekStatus seek = te.seekCeil(firstTerm.bytes());
+                List<Entry<String, LexiconEntry>> terms = new ArrayList<>();
+                if (seek == TermsEnum.SeekStatus.END) {
+                    return terms.iterator();
+                }
+                terms.add(makePair(te));
+                
+                while( te.next() != null)
+                {
+                    Entry<String, LexiconEntry> entry = makePair(te);
+                    if (entry.getKey().compareTo(to) > 0)
+                    {
+                        break;
+                    }
+                    terms.add(entry);
+                }
+                return terms.iterator();
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
 		}
 	}
 
@@ -194,7 +238,7 @@ public class LuceneIndex extends Index {
             throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'id' for the docnos");
         try {
             if (DOCLEN_FROM_TERM_VECTORS && ir.getTermVector(0, DEFAULT_FIELD) == null)
-            throw new IllegalArgumentException("We assume that the Lucene index should have term vectors in order to get document lengths");
+                throw new IllegalArgumentException("We assume that the Lucene index should have term vectors in order to get document lengths");
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
