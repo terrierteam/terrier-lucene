@@ -5,7 +5,7 @@ This package intends to allow Terrier to read an index created by Lucene. Our pa
 
 ## Requirements
 
-- You need the current Github version of Terrier, i.e. 5.2-SNAPSHOT
+- You need the current Github version of Terrier, i.e. 5.3-SNAPSHOT
 - You need a Lucene index, in particular with an "id" field (containing the docno of the document) and a "contents" textual field.
 
 ## Compiling
@@ -26,12 +26,12 @@ Example usages follow below.
 
 ### Printing index statistics
 ```
-bin/terrier indexstats -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/path/to/lucene/index/
+bin/terrier indexstats -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/index/
 ```
 
 ### Interactive Retrival
 ```
-bin/terrier interactive -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/path/to/lucene/index/
+bin/terrier interactive -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/index/
 ```
 
 (The -P option was added in Terrier 5.2)
@@ -40,12 +40,12 @@ bin/terrier interactive -P org.terrier:terrier-lucene:0.0.1-SNAPSHOT -I lucene:/
 
 Code: Craig Macdonald, University of Glasgow
 
-Useful debuggin and input from Jimmy Lin, University of Waterloo
+Useful debugging and input from Jimmy Lin, University of Waterloo
 
 ## TODO
 
 - How is an IndexRef passed to MultiIndex?
-- MultiIndex termids are not global
+- MultiIndex termids are not global, and hence direct indices are explicitly not supported for multi-shard indices.
 
 ## Known Issues
 

@@ -20,10 +20,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.terrier.querying.IndexRef;
+import org.terrier.querying.Manager;
+import org.terrier.querying.ManagerFactory;
+import org.terrier.querying.SearchRequest;
 import org.terrier.structures.DocumentIndexEntry;
 import org.terrier.structures.Index;
 import org.terrier.structures.IndexFactory;
 import org.terrier.structures.LexiconEntry;
+import org.terrier.structures.IndexFactory.DirectIndexRef;
 import org.terrier.structures.postings.BlockPosting;
 import org.terrier.structures.postings.IterablePosting;
 import org.terrier.structures.postings.PostingUtil;
@@ -62,9 +66,10 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
             DOCS,
             DOCNOS);
         
-        LuceneIndex index = new LuceneIndex(ir.leaves().get(0).reader());
+        LuceneIndex index = new LuceneIndex(ir.leaves().get(0).reader(), tempLocation.getRoot().toString());
         assertFalse(index.blocks);
         checkIndex(index);
+        doRetrieval(index);
         index.close();
         
     }
@@ -86,9 +91,10 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
         assertEquals(2, pe.nextPosition());
         assertEquals(DocIdSetIterator.NO_MORE_DOCS, pe.nextDoc());
 
-        LuceneIndex index = new DirectLuceneIndex(ir.leaves().get(0).reader());
+        LuceneIndex index = new DirectLuceneIndex(ir.leaves().get(0).reader(), tempLocation.getRoot().toString());
         assertTrue(index.blocks);
         checkIndex(index);
+        doRetrieval(index);
 
         //check positions in inverted index.
         IterablePosting ip = index.getInvertedIndex().getPostings(index.getLexicon().getLexiconEntry("fox"));
@@ -124,9 +130,10 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
             DOCS,
             DOCNOS);
         
-        LuceneIndex index = new DirectLuceneIndex(ir.leaves().get(0).reader());
+        LuceneIndex index = new DirectLuceneIndex(ir.leaves().get(0).reader(), tempLocation.getRoot().toString());
+        assertTrue(index.hasIndexStructure("direct"));
         checkIndex(index);
-        
+        doRetrieval(index);
         checkDocContents(0, index, new String[]{"hello", "there", "fox"});
         checkDocContents(1, index, new String[]{"the", "lazy", "fox"});
         index.close();
@@ -147,12 +154,31 @@ public class TestLuceneIndex extends ApplicationSetupBasedTest
             assertTrue("Term " + t + " is missing in document " +docid, id1.contains(le.getTermId()));
         }
     }
+
+    private void doRetrieval(LuceneIndex i) throws Exception {
+        Manager m = ManagerFactory._from_(i.getIndexRef());
+        SearchRequest srq = m.newSearchRequestFromQuery("fox");
+        m.runSearchRequest(srq);
+        assertTrue(srq.getResults().size() > 0);
+
+        if (i.hasIndexStructure("direct"))
+        {
+            srq = m.newSearchRequestFromQuery("fox");
+            srq.setControl("qe", "on");
+            m.runSearchRequest(srq);
+            assertTrue(srq.getResults().size() > 0);
+        }
+    }
  
     private void checkIndex(LuceneIndex index) throws IOException {
         assertNotNull(index.getCollectionStatistics());
         assertNotNull(index.getLexicon());
         assertNotNull(index.getInvertedIndex());
-        assertNotNull(index.getMetaIndex());     
+        assertNotNull(index.getMetaIndex());
+        
+        assertNotNull(index.getIndexRef());
+        assertTrue(index.getIndexRef() instanceof DirectIndexRef);
+
         assertEquals(2, index.getCollectionStatistics().getNumberOfDocuments());
 
         LexiconEntry le = index.getLexicon().getLexiconEntry("fox");

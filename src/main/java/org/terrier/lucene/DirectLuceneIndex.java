@@ -26,8 +26,8 @@ public class DirectLuceneIndex extends LuceneIndex {
     BidiMap<String, Integer> term2termid = new DualHashBidiMap<>();
     BidiMap<Integer, String> termid2term;
 
-    public DirectLuceneIndex(LeafReader _lr) {
-        super(_lr);
+    public DirectLuceneIndex(LeafReader _lr, String _loc) {
+        super(_lr, _loc);
         if (super.getCollectionStatistics().getNumberOfDocuments() == 0)
         {
             throw new UnsupportedOperationException("zero document indices not supported");
@@ -118,4 +118,16 @@ public class DirectLuceneIndex extends LuceneIndex {
             
         };
     }   
+
+    @Override
+    public String toString() {
+        return LuceneIndexFactory.DIRECTPREFIX + loc;
+    }
+
+    @Override
+    public boolean hasIndexStructure(String structureName) {
+        if (structureName.equals("direct"))
+            return true;
+        return super.hasIndexStructure(structureName);
+    }
 }

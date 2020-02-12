@@ -47,12 +47,11 @@ public class LuceneIndex extends Index {
 
         @Override
         public Iterator<Entry<String, LexiconEntry>> iterator() {
-            //TODO: this implementation doesnt stream, it loads into memory
-            try{
+            // TODO: this implementation doesnt stream, it loads into memory
+            try {
                 TermsEnum te = ir.terms(DEFAULT_FIELD).iterator();
                 List<Entry<String, LexiconEntry>> terms = new ArrayList<>();
-                while( te.next() != null)
-                {
+                while (te.next() != null) {
                     terms.add(makePair(te));
                 }
                 return terms.iterator();
@@ -102,12 +101,12 @@ public class LuceneIndex extends Index {
             LuceneLexiconEntry lie = new LuceneLexiconEntry();
             lie.t = new Term(DEFAULT_FIELD, te.term());
             lie.setStatistics(te.docFreq(), (int) te.totalTermFreq());
-            return Pair.of(lie.t.text(), lie) ;
+            return Pair.of(lie.t.text(), lie);
         }
 
         @Override
         public Iterator<Entry<String, LexiconEntry>> getLexiconEntryRange(final String from, final String to) {
-            try{
+            try {
                 TermsEnum te = ir.terms(DEFAULT_FIELD).iterator();
                 final Term firstTerm = new Term(DEFAULT_FIELD, from);
                 TermsEnum.SeekStatus seek = te.seekCeil(firstTerm.bytes());
@@ -116,12 +115,10 @@ public class LuceneIndex extends Index {
                     return terms.iterator();
                 }
                 terms.add(makePair(te));
-                
-                while( te.next() != null)
-                {
+
+                while (te.next() != null) {
                     Entry<String, LexiconEntry> entry = makePair(te);
-                    if (entry.getKey().compareTo(to) > 0)
-                    {
+                    if (entry.getKey().compareTo(to) > 0) {
                         break;
                     }
                     terms.add(entry);
@@ -130,10 +127,10 @@ public class LuceneIndex extends Index {
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
-		}
-	}
+        }
+    }
 
-	class PostingEnumIterablePosting extends IterablePostingImpl {
+    class PostingEnumIterablePosting extends IterablePostingImpl {
         PostingsEnum pe;
         NumericDocValues ndv;
         int docid;
@@ -228,17 +225,22 @@ public class LuceneIndex extends Index {
 
     final LeafReader ir;
     final boolean blocks;
+    final String loc;
 
-    public LuceneIndex(LeafReader _lr) {
+    public LuceneIndex(LeafReader _lr, String _loc) {
         this.ir = _lr;
+        this.loc = _loc;
         blocks = ir.getFieldInfos().hasProx();
         if (ir.getFieldInfos().fieldInfo(DEFAULT_FIELD) == null)
-            throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'contents' for the text of the documents");
+            throw new IllegalArgumentException(
+                    "We assume that the Lucene index should have a field named 'contents' for the text of the documents");
         if (ir.getFieldInfos().fieldInfo("id") == null)
-            throw new IllegalArgumentException("We assume that the Lucene index should have a field named 'id' for the docnos");
+            throw new IllegalArgumentException(
+                    "We assume that the Lucene index should have a field named 'id' for the docnos");
         try {
             if (DOCLEN_FROM_TERM_VECTORS && ir.getTermVector(0, DEFAULT_FIELD) == null)
-                throw new IllegalArgumentException("We assume that the Lucene index should have term vectors in order to get document lengths");
+                throw new IllegalArgumentException(
+                        "We assume that the Lucene index should have term vectors in order to get document lengths");
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
@@ -273,7 +275,7 @@ public class LuceneIndex extends Index {
 
     @Override
     public PostingIndex<?> getDirectIndex() {
-        //only DirectLuceneIndex implements a DirectIndex
+        // only DirectLuceneIndex implements a DirectIndex
         return null;
     }
 
@@ -292,12 +294,12 @@ public class LuceneIndex extends Index {
                 // TODO not sure this works.
                 // Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
                 // if (terms == null) {
-                //     return 0;
+                // return 0;
                 // }
                 // long total = terms.getSumTotalTermFreq();
                 // long length = SmallFloat.longToInt4(total);
                 // return (int) length;
-                //throw new UnsupportedOperationException();
+                // throw new UnsupportedOperationException();
                 return 0;
             }
 
@@ -305,8 +307,7 @@ public class LuceneIndex extends Index {
             public DocumentIndexEntry getDocumentEntry(final int docid) throws IOException {
                 int numTerms = (int) ir.getTermVector(docid, DEFAULT_FIELD).size();
                 return new LuceneDocumentIndexEntry(getDocumentLength(docid),
-                        new SimpleBitIndexPointer((byte) 0, (long) docid, (byte) 0, numTerms),
-                        docid);
+                        new SimpleBitIndexPointer((byte) 0, (long) docid, (byte) 0, numTerms), docid);
             }
         };
     }
@@ -349,15 +350,14 @@ public class LuceneIndex extends Index {
                 LuceneLexiconEntry lEntry = (LuceneLexiconEntry) _lEntry;
                 PostingsEnum pe = null;
                 if (blocks) {
-                    pe = MultiTerms.getTermPostingsEnum(
-                        ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text())
-                        /*, PostingsEnum.FREQS & PostingsEnum.POSITIONS*/ //these arent needed it seem
-                        );
-                    //pe = ir.postings(lEntry.t, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
+                    pe = MultiTerms.getTermPostingsEnum(ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text())
+                    /* , PostingsEnum.FREQS & PostingsEnum.POSITIONS */ // these arent needed it seem
+                    );
+                    // pe = ir.postings(lEntry.t, PostingsEnum.FREQS & PostingsEnum.POSITIONS);
                     return new PositionsPostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
                 }
                 pe = MultiTerms.getTermPostingsEnum(ir, DEFAULT_FIELD, new BytesRef(lEntry.t.text()));
-                //pe = ir.postings(lEntry.t);
+                // pe = ir.postings(lEntry.t);
                 return new PostingEnumIterablePosting(pe, ir.getNormValues(DEFAULT_FIELD));
             }
         };
@@ -378,8 +378,7 @@ public class LuceneIndex extends Index {
         }
     }
 
-    static class LuceneLexiconEntry extends BasicLexiconEntry
-    {
+    static class LuceneLexiconEntry extends BasicLexiconEntry {
         private static final long serialVersionUID = 1L;
         Term t;
     }
@@ -391,68 +390,76 @@ public class LuceneIndex extends Index {
 
     @Override
     public MetaIndex getMetaIndex() {
-        return new MetaIndex(){
-        
+        return new MetaIndex() {
+
             @Override
-            public void close() throws IOException {}
-        
+            public void close() throws IOException {
+            }
+
             @Override
             public String[] getKeys() {
-                return new String[]{"docno"};
+                return new String[] { "docno" };
             }
-        
-            //TODO - these could go as default implementation in MetaIndex.
+
+            // TODO - these could go as default implementation in MetaIndex.
             @Override
             public String[][] getItems(String[] Keys, int[] docids) throws IOException {
                 String[][] rtr = new String[Keys.length][];
-                for(int i=0;i<Keys.length;i++)
-                {
+                for (int i = 0; i < Keys.length; i++) {
                     rtr[i] = getItems(Keys[i], docids);
                 }
                 return rtr;
             }
-        
+
             @Override
             public String[] getItems(String[] Keys, int docid) throws IOException {
                 String[] rtr = new String[Keys.length];
-                for(int i=0;i<Keys.length;i++)
-                {
+                for (int i = 0; i < Keys.length; i++) {
                     rtr[i] = getItem(Keys[i], docid);
                 }
                 return rtr;
             }
-        
+
             @Override
             public String[] getItems(String Key, int[] docids) throws IOException {
                 String[] rtr = new String[docids.length];
-                for(int i=0;i<docids.length;i++)
-                {
+                for (int i = 0; i < docids.length; i++) {
                     rtr[i] = getItem(Key, docids[i]);
                 }
                 return rtr;
             }
-        
+
             @Override
             public String getItem(String Key, int docid) throws IOException {
                 return ir.document(docid).get("id");
             }
-        
+
             @Override
             public int getDocument(String key, String value) throws IOException {
                 return -1;
             }
-        
+
             @Override
             public String[] getAllItems(int docid) throws IOException {
-                return new String[]{getItem("docno", docid)};
+                return new String[] { getItem("docno", docid) };
             }
         };
     }
 
     @Override
     public String toString() {
-        // TODO Auto-generated method stub
-        return null;
+        return LuceneIndexFactory.PREFIX + loc;
+    }
+
+    @Override
+    public boolean hasIndexStructure(String structureName) {
+        switch (structureName) {
+            case "lexicon": return true;
+            case "inverted": return true;
+            case "meta": return true;
+            case "document": return true;        
+            default: return false;
+        }
     }
 
     
