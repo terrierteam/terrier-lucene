@@ -36,6 +36,12 @@ bin/terrier interactive -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/
 
 (The -P option was added in Terrier 5.2; the ability to omit the version number was added in 5.3)
 
+## Batch Retrieval
+```
+bin/terrier batchretrieve -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/index/ -t /path/to/topics.trec
+```
+
+
 ## Contributors
 
 Code: Craig Macdonald, University of Glasgow
