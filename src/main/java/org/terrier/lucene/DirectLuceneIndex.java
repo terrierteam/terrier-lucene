@@ -28,18 +28,16 @@ public class DirectLuceneIndex extends LuceneIndex {
 
     public DirectLuceneIndex(LeafReader _lr, String _loc) {
         super(_lr, _loc);
-        if (super.getCollectionStatistics().getNumberOfDocuments() == 0)
-        {
+        if (super.getCollectionStatistics().getNumberOfDocuments() == 0) {
             throw new UnsupportedOperationException("zero document indices not supported");
         }
         try {
-            //check that the lucene index is suitable
-            if (ir.getTermVectors(0) == null)
-            {
+            // check that the lucene index is suitable
+            if (ir.getTermVectors(0) == null) {
                 throw new IllegalArgumentException("Index has no term vectors (aka direct index)");
             }
 
-            //build a mapping from term <-> "termids"
+            // build a mapping from term <-> "termids"
             Terms terms = ir.terms(DEFAULT_FIELD);
             TermsEnum tes = terms.iterator();
             int id = 0;
@@ -58,7 +56,7 @@ public class DirectLuceneIndex extends LuceneIndex {
         @Override
         LuceneLexiconEntry entryFromTerm(Term t) {
             LuceneLexiconEntry lle = super.entryFromTerm(t);
-            //term not found
+            // term not found
             if (lle == null)
                 return null;
             lle.termId = term2termid.get(t.text());
@@ -68,7 +66,7 @@ public class DirectLuceneIndex extends LuceneIndex {
         @Override
         public Entry<String, LexiconEntry> getLexiconEntry(int termid) {
             String term = termid2term.get(termid);
-            return Pair.of(term,super.getLexiconEntry(term));
+            return Pair.of(term, super.getLexiconEntry(term));
         }
 
     }
@@ -83,37 +81,55 @@ public class DirectLuceneIndex extends LuceneIndex {
         return new PostingIndex<LuceneDocumentIndexEntry>() {
 
             @Override
-            public void close() throws IOException {}
+            public void close() throws IOException {
+            }
 
             @Override
             public IterablePosting getPostings(Pointer pointer) throws IOException {
-                int docid = ((LuceneDocumentIndexEntry)pointer).docid;
-                
+                int docid = ((LuceneDocumentIndexEntry) pointer).docid;
+
                 Terms t = ir.getTermVector(docid, DEFAULT_FIELD);
                 TermsEnum iterator = t.iterator();
                 TIntArrayList termids = new TIntArrayList();
                 TIntArrayList freqs = new TIntArrayList();
                 TIntArrayList positions = new TIntArrayList();
                 PostingsEnum p = null;
-                while(iterator.next() != null)
-                {
+                int _doclen = 0;
+                while (iterator.next() != null) {
                     String term = iterator.term().utf8ToString();
                     termids.add(term2termid.get(term));
-                    p = iterator.postings( p, PostingsEnum.ALL );
+                    p = iterator.postings(p, PostingsEnum.ALL);
                     p.nextDoc();
                     final int f = p.freq();
 
-                    //should this be totalTermFreq()?
-                    //final int f = iterator.docFreq();
+                    // should this be totalTermFreq()?
+                    // final int f = iterator.docFreq();
                     freqs.add(f);
                     if (blocks) {
-                        for(int pi=0;pi<f;pi++)
+                        for (int pi = 0; pi < f; pi++)
                             positions.add(p.nextPosition());
                     }
+                    _doclen++;
                 }
+                final int doclen = _doclen;
                 if (blocks)
-                    return new ArrayOfBlockIterablePosting(termids.toNativeArray(), freqs.toNativeArray(), freqs.toNativeArray(), positions.toNativeArray());
-                return new ArrayOfBasicIterablePosting(termids.toNativeArray(), freqs.toNativeArray());
+                    return new ArrayOfBlockIterablePosting(termids.toNativeArray(), freqs.toNativeArray(),
+                            freqs.toNativeArray(), positions.toNativeArray()){
+
+                                @Override
+                                public int getDocumentLength() {
+                                    return doclen;
+                                }
+                                
+                            };
+                return new ArrayOfBasicIterablePosting(termids.toNativeArray(), freqs.toNativeArray()) {
+
+                    @Override
+                    public int getDocumentLength() {
+                        return doclen;
+                    }
+                    
+                };
             }
             
         };

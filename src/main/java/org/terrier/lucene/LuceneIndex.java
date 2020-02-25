@@ -173,7 +173,6 @@ public class LuceneIndex extends Index {
                 if (DOCLEN_FROM_TERM_VECTORS)
                     return (int) ir.getTermVector(this.getId(), DEFAULT_FIELD).getSumTotalTermFreq();
                 return (int) SmallFloat.byte4ToInt((byte) ndv.longValue());
-                // return getDocumentIndex().getDocumentLength(this.getId());
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
@@ -226,6 +225,7 @@ public class LuceneIndex extends Index {
     final LeafReader ir;
     final boolean blocks;
     final String loc;
+    DocumentIndex doi;
 
     public LuceneIndex(LeafReader _lr, String _loc) {
         this.ir = _lr;
@@ -281,35 +281,49 @@ public class LuceneIndex extends Index {
 
     @Override
     public DocumentIndex getDocumentIndex() {
-        return new DocumentIndex() {
+        if (doi != null)
+            return doi;
+        
+        try{
+            int[] doclens = new int[ir.numDocs()];
+            NumericDocValues ndv = this.ir.getNormValues(DEFAULT_FIELD);
+            int docid;
+            while( (docid = ndv.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS)
+            {
+                doclens[docid] = (int) ndv.longValue();
+            }            
 
-            @Override
-            public int getNumberOfDocuments() {
-                return ir.numDocs();
-            }
+            return doi = new DocumentIndex() {
 
-            @Override
-            public int getDocumentLength(final int docid) throws IOException {
+                @Override
+                public int getNumberOfDocuments() {
+                    return ir.numDocs();
+                }
 
-                // TODO not sure this works.
-                // Terms terms = ir.getTermVector(docid, DEFAULT_FIELD);
-                // if (terms == null) {
-                // return 0;
-                // }
-                // long total = terms.getSumTotalTermFreq();
-                // long length = SmallFloat.longToInt4(total);
-                // return (int) length;
-                // throw new UnsupportedOperationException();
-                return 0;
-            }
+                @Override
+                public int getDocumentLength(final int docid) throws IOException {
 
-            @Override
-            public DocumentIndexEntry getDocumentEntry(final int docid) throws IOException {
-                int numTerms = (int) ir.getTermVector(docid, DEFAULT_FIELD).size();
-                return new LuceneDocumentIndexEntry(getDocumentLength(docid),
-                        new SimpleBitIndexPointer((byte) 0, (long) docid, (byte) 0, numTerms), docid);
-            }
-        };
+                    return doclens[docid];
+                    // if (DOCLEN_FROM_TERM_VECTORS)
+                    // {
+                    //     Terms t = ir.getTermVector(docid, DEFAULT_FIELD);
+                    //     if (t == null)
+                    //         throw new UnsupportedOperationException("term vectors not found");
+                    //     return (int) t.getSumTotalTermFreq();
+                    // }
+                    // throw new UnsupportedOperationException("term vectors not supported for doclen lookups");
+                }
+
+                @Override
+                public DocumentIndexEntry getDocumentEntry(final int docid) throws IOException {
+                    int numTerms = (int) ir.getTermVector(docid, DEFAULT_FIELD).size();
+                    return new LuceneDocumentIndexEntry(getDocumentLength(docid),
+                            new SimpleBitIndexPointer((byte) 0, (long) docid, (byte) 0, numTerms), docid);
+                }
+            };
+        } catch (Exception ioe ) {
+            throw new RuntimeException("Could not load doclens: ", ioe);
+        }
     }
 
     @Override
