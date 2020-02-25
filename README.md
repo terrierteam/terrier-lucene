@@ -34,7 +34,13 @@ bin/terrier indexstats -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/i
 bin/terrier interactive -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/index/
 ```
 
-(The -P option was added in Terrier 5.2)
+(The -P option was added in Terrier 5.2; the ability to omit the version number was added in 5.3)
+
+## Batch Retrieval
+```
+bin/terrier batchretrieve -P org.terrier:terrier-lucene -I lucene:/path/to/lucene/index/ -t /path/to/topics.trec
+```
+
 
 ## Contributors
 
@@ -42,11 +48,7 @@ Code: Craig Macdonald, University of Glasgow
 
 Useful debugging and input from Jimmy Lin, University of Waterloo
 
-## TODO
+## TODO and Known Issues
 
-- How is an IndexRef passed to MultiIndex?
 - MultiIndex termids are not global, and hence direct indices are explicitly not supported for multi-shard indices.
-
-## Known Issues
-
 - We do not have any correspondence between Lucene fields and Terrier fields. This is not planned for the foreseeable future.
