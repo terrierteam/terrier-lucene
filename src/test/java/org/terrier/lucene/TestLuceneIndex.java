@@ -27,7 +27,7 @@ import org.terrier.structures.DocumentIndexEntry;
 import org.terrier.structures.Index;
 import org.terrier.structures.IndexFactory;
 import org.terrier.structures.LexiconEntry;
-import org.terrier.structures.IndexFactory.DirectIndexRef;
+import org.terrier.structures.Index.DirectIndexRef;
 import org.terrier.structures.postings.BlockPosting;
 import org.terrier.structures.postings.IterablePosting;
 import org.terrier.structures.postings.PostingUtil;

@@ -16,6 +16,7 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.SmallFloat;
+import org.terrier.querying.IndexRef;
 import org.terrier.structures.BasicDocumentIndexEntry;
 import org.terrier.structures.BasicLexiconEntry;
 import org.terrier.structures.BitIndexPointer;
@@ -251,9 +252,9 @@ public class LuceneIndex extends Index {
         ir.close();
     }
 
-    @Override
-    public void flush() throws IOException {
-
+    @Override 
+    public IndexRef getIndexRef() {
+        return Index.makeDirectIndexRef(this);
     }
 
     @Override

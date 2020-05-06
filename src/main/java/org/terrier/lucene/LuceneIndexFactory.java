@@ -15,7 +15,7 @@ import org.apache.lucene.store.SimpleFSDirectory;
 import org.terrier.querying.IndexRef;
 import org.terrier.realtime.multi.MultiIndex;
 import org.terrier.structures.Index;
-import org.terrier.structures.IndexFactory.DirectIndexRef;
+import org.terrier.structures.Index.DirectIndexRef;
 import org.terrier.structures.IndexFactory.IndexLoader;
 
 public class LuceneIndexFactory implements IndexLoader {
