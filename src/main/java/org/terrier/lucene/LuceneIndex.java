@@ -188,11 +188,6 @@ public class LuceneIndex extends Index {
         public int getId() {
             return docid;
         }
-
-        @Override
-        public void setId(int id) {
-            throw new UnsupportedOperationException();
-        }
     }
 
     class PositionsPostingEnumIterablePosting extends PostingEnumIterablePosting implements BlockPosting {
@@ -268,7 +263,7 @@ public class LuceneIndex extends Index {
             final long numPointers = ir.getSumDocFreq(DEFAULT_FIELD);
             final long[] fieldTokens = new long[0];
             final String[] fieldNames = new String[0];
-            return new CollectionStatistics(numDocs, numTerms, numTokens, numPointers, fieldTokens, fieldNames);
+            return new CollectionStatistics(numDocs, numTerms, numTokens, numPointers, fieldTokens, fieldNames, blocks);
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
@@ -457,6 +452,11 @@ public class LuceneIndex extends Index {
             @Override
             public String[] getAllItems(int docid) throws IOException {
                 return new String[] { getItem("docno", docid) };
+            }
+
+            @Override
+            public int size() {
+                return getCollectionStatistics().getNumberOfDocuments();
             }
         };
     }

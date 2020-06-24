@@ -4,7 +4,7 @@
 
 	<groupId>org.terrier</groupId>
 	<artifactId>terrier-lucene</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>terrier-lucene</name>
@@ -12,7 +12,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<lucene.version>8.3.0</lucene.version>
-		<terrier.version>5.3-SNAPSHOT</terrier.version>
+		<terrier.version>5.3</terrier.version>
 	</properties>
 	<build>
 		<plugins>
@@ -25,16 +25,16 @@
 					<fork>true</fork>
 					<source>1.8</source>
 					<target>1.8</target>
-					<excludes>
-						<exclude>**/org/terrier/applications/OptWSD.java</exclude>
-						<exclude>**/org/terrier/querying/analysis/WikipediaSubQueryImportance.java</exclude>
-
-					</excludes>
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
 	<dependencies>
+		<dependency>
+			<groupId>org.terrier</groupId>
+			<artifactId>terrier-index-api</artifactId>
+			<version>${terrier.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.terrier</groupId>
 			<artifactId>terrier-core</artifactId>
