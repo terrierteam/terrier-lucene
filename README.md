@@ -1,3 +1,4 @@
+[![](https://jitpack.io/v/terrierteam/terrier-lucene.svg)](https://jitpack.io/#terrierteam/terrier-lucene)
 
 # Terrier-Lucene
 
